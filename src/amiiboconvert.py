@@ -162,6 +162,8 @@ def process(path: str, output_path: str, tree: bool):
         if tree:
             new_output_path = os.path.join(output_path, pathlib.Path(*pathlib.Path(path).parts[1:]))
             os.makedirs(new_output_path, exist_ok=True)
+        else:
+            new_output_path = output_path
         for filename in os.listdir(path):
             new_path = os.path.join(path, filename)
             logging.debug(f"Current file: {filename}; Current path: {new_path}")
