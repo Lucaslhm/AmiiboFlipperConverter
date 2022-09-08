@@ -149,7 +149,7 @@ def convert_file(input_path: str, output_path: str):
         logging.info(f"{input_path} doesn't seem like a relevant file, skipping")
 
 
-def process(path: str, output_path: str):
+def process(path: str, output_path: str, tree: bool):
     """
     Process an input file, or walk through an input directory and process every matching .bin file therein
     :param path: Path to a single file or a directory containing one or more .bin files
@@ -158,6 +158,9 @@ def process(path: str, output_path: str):
     if os.path.isfile(path):
         convert_file(path, output_path)
     else:
+        if tree:
+            output_path = os.path.join(output_path, pathlib.Path(*pathlib.Path(path).parts[1:]))
+            os.makedirs(output_path, exist_ok=True)
         for filename in os.listdir(path):
             new_path = os.path.join(path, filename)
             logging.debug(f"Current file: {filename}; Current path: {new_path}")
@@ -166,7 +169,7 @@ def process(path: str, output_path: str):
                 convert_file(new_path, output_path)
             else:
                 logging.debug(f"Recursing into: {new_path}")
-                process(new_path, output_path)
+                process(new_path, output_path, tree)
 
 
 def get_args():
@@ -192,6 +195,13 @@ def get_args():
         action="count",
         default=0,
         help="Show extra info: pass -v to see what's going on, pass -vv to get useful debug info",
+    )
+    parser.add_argument(
+        "-t",
+        "--tree",
+        action="store_true",
+        default=False,
+        help="Output the same folder structure as read from input folder",
     )
     args = parser.parse_args()
     if args.verbose >= 2:
@@ -228,7 +238,7 @@ def main():
     os.makedirs(args.output_path, exist_ok=True)
 
     logging.debug(f"input: {args.input_path}, output: {args.output_path}")
-    process(args.input_path, args.output_path)
+    process(args.input_path, args.output_path, args.tree)
 
 
 if __name__ == "__main__":
