@@ -41,6 +41,7 @@ def convert(contents: bytes) -> Tuple[str, int]:
     When all's said and done, buffer contains text ready for writing to the end of a .nfc file.
 
     Also tracks and returns running page number, since that's also needed.
+    There should be exacly 135 pages for the .nfc not to fail on flipper
     :param contents: byte array we're reading, from a .bin file
     :return: The full string of Pages, suitable for writing to a file
     """
@@ -48,7 +49,11 @@ def convert(contents: bytes) -> Tuple[str, int]:
     page_count = 0
 
     page = []
-    for i in range(len(contents) - 1):
+    for i in range(len(contents)):
+        if page_count > 134:
+            logging.debug(f"We have enough pages, breaking")
+            break
+
         byte = contents[i : i + 1].hex()
         page.append(byte)
 
@@ -58,13 +63,21 @@ def convert(contents: bytes) -> Tuple[str, int]:
             page_count += 1
 
     # we may have an unfilled page. This needs to be filled out and appended
-    logging.debug(f"We have an unfilled final page: {page} with length {len(page)}")
     if len(page) > 0:
+        logging.debug(f"We have an unfilled final page: {page} with length {len(page)}")
         # pad with zeroes
         for i in range(len(page) - 1, 3):
             page.append("00")
         buffer.append(f"Page {page_count}: {' '.join(page).upper()}")
         page_count += 1
+
+    # we are missing a few pages, padding with zeroes
+    if page_count < 135:
+        logging.debug(f"We are missing {135-page_count} pages, padding with zeroes")
+        while page_count < 135:
+            buffer.append(f"Page {page_count}: 00 00 00 00")
+            page_count += 1
+
     return "\n".join(buffer), page_count
 
 
