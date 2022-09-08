@@ -1,12 +1,13 @@
 """
 amiiboconvert.py
-3/12/2022
+9/8/2022
 Modified Amiibo Flipper Conversion Code
 
 Original Code by Friendartiste
 Modified by Lamp
 Modified again by VapidAnt
 Modified and commented by bjschafer
+Modified yet again by Lanjelin
 
 Execute with python amiiboconvert -h to see options
 """
@@ -179,7 +180,7 @@ def get_args():
         "--input-path",
         required=True,
         type=pathlib.Path,
-        help="Single file or directory tree to convert",
+        help="Single file or directory tree to convert.",
     )
     parser.add_argument(
         "-o",
@@ -194,14 +195,14 @@ def get_args():
         "--verbose",
         action="count",
         default=0,
-        help="Show extra info: pass -v to see what's going on, pass -vv to get useful debug info",
+        help="Show extra info: pass -v to see what's going on, pass -vv to get useful debug info.",
     )
     parser.add_argument(
         "-t",
         "--tree",
         action="store_true",
         default=False,
-        help="Output the same folder structure as read from input folder",
+        help="Keep the same folder structure from the input folder to the output folder.",
     )
     args = parser.parse_args()
     if args.verbose >= 2:
