@@ -159,14 +159,14 @@ def process(path: str, output_path: str, tree: bool):
         convert_file(path, output_path)
     else:
         if tree:
-            output_path = os.path.join(output_path, pathlib.Path(*pathlib.Path(path).parts[1:]))
-            os.makedirs(output_path, exist_ok=True)
+            new_output_path = os.path.join(output_path, pathlib.Path(*pathlib.Path(path).parts[1:]))
+            os.makedirs(new_output_path, exist_ok=True)
         for filename in os.listdir(path):
             new_path = os.path.join(path, filename)
             logging.debug(f"Current file: {filename}; Current path: {new_path}")
 
             if os.path.isfile(new_path):
-                convert_file(new_path, output_path)
+                convert_file(new_path, new_output_path)
             else:
                 logging.debug(f"Recursing into: {new_path}")
                 process(new_path, output_path, tree)
