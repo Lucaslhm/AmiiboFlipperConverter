@@ -137,7 +137,7 @@ def convert_file(input_path: str, output_path: str):
     """
     input_extension = os.path.splitext(input_path)[1]
     if input_extension == ".bin":
-        logging.info(f"Writing: {input_path}")
+        logging.info(f"Writing: {os.path.join(output_path, os.path.splitext(os.path.basename(input_path))[0])}.nfc")
         with open(input_path, "rb") as file:
             contents = file.read()
             name = os.path.split(input_path)[1]
