@@ -1,12 +1,13 @@
 """
 amiiboconvert.py
-3/12/2022
+9/8/2022
 Modified Amiibo Flipper Conversion Code
 
 Original Code by Friendartiste
 Modified by Lamp
 Modified again by VapidAnt
 Modified and commented by bjschafer
+Modified yet again by Lanjelin
 
 Execute with python amiiboconvert -h to see options
 """
@@ -41,6 +42,8 @@ def convert(contents: bytes) -> Tuple[str, int]:
     When all's said and done, buffer contains text ready for writing to the end of a .nfc file.
 
     Also tracks and returns running page number, since that's also needed.
+    There should be exacly 135 pages for the .nfc not to fail on flipper,
+    due to NTAG215 beeing of 540 byte (135 pages) capacity.
     :param contents: byte array we're reading, from a .bin file
     :return: The full string of Pages, suitable for writing to a file
     """
@@ -48,7 +51,11 @@ def convert(contents: bytes) -> Tuple[str, int]:
     page_count = 0
 
     page = []
-    for i in range(len(contents) - 1):
+    for i in range(len(contents)):
+        if page_count > 134:
+            logging.debug(f"We have enough pages, breaking")
+            break
+
         byte = contents[i : i + 1].hex()
         page.append(byte)
 
@@ -58,13 +65,21 @@ def convert(contents: bytes) -> Tuple[str, int]:
             page_count += 1
 
     # we may have an unfilled page. This needs to be filled out and appended
-    logging.debug(f"We have an unfilled final page: {page} with length {len(page)}")
     if len(page) > 0:
+        logging.debug(f"We have an unfilled final page: {page} with length {len(page)}")
         # pad with zeroes
         for i in range(len(page) - 1, 3):
             page.append("00")
         buffer.append(f"Page {page_count}: {' '.join(page).upper()}")
         page_count += 1
+
+    # we are missing a few pages, padding with zeroes
+    if page_count < 135:
+        logging.debug(f"We are missing {135-page_count} pages, padding with zeroes")
+        while page_count < 135:
+            buffer.append(f"Page {page_count}: 00 00 00 00")
+            page_count += 1
+
     return "\n".join(buffer), page_count
 
 
@@ -124,7 +139,7 @@ def convert_file(input_path: str, output_path: str):
     """
     input_extension = os.path.splitext(input_path)[1]
     if input_extension == ".bin":
-        logging.info(f"Writing: {input_path}")
+        logging.info(f"Writing: {os.path.join(output_path, os.path.splitext(os.path.basename(input_path))[0])}.nfc")
         with open(input_path, "rb") as file:
             contents = file.read()
             name = os.path.split(input_path)[1]
@@ -136,7 +151,7 @@ def convert_file(input_path: str, output_path: str):
         logging.info(f"{input_path} doesn't seem like a relevant file, skipping")
 
 
-def process(path: str, output_path: str):
+def process(path: str, output_path: str, tree: bool):
     """
     Process an input file, or walk through an input directory and process every matching .bin file therein
     :param path: Path to a single file or a directory containing one or more .bin files
@@ -145,15 +160,20 @@ def process(path: str, output_path: str):
     if os.path.isfile(path):
         convert_file(path, output_path)
     else:
+        if tree:
+            new_output_path = os.path.join(output_path, pathlib.Path(*pathlib.Path(path).parts[1:]))
+            os.makedirs(new_output_path, exist_ok=True)
+        else:
+            new_output_path = output_path
         for filename in os.listdir(path):
             new_path = os.path.join(path, filename)
             logging.debug(f"Current file: {filename}; Current path: {new_path}")
 
-            if os.path.isfile(path):
-                convert_file(path, output_path)
+            if os.path.isfile(new_path):
+                convert_file(new_path, new_output_path)
             else:
                 logging.debug(f"Recursing into: {new_path}")
-                process(new_path, output_path)
+                process(new_path, output_path, tree)
 
 
 def get_args():
@@ -163,7 +183,7 @@ def get_args():
         "--input-path",
         required=True,
         type=pathlib.Path,
-        help="Single file or directory tree to convert",
+        help="Single file or directory tree to convert.",
     )
     parser.add_argument(
         "-o",
@@ -178,7 +198,14 @@ def get_args():
         "--verbose",
         action="count",
         default=0,
-        help="Show extra info: pass -v to see what's going on, pass -vv to get useful debug info",
+        help="Show extra info: pass -v to see what's going on, pass -vv to get useful debug info.",
+    )
+    parser.add_argument(
+        "-t",
+        "--tree",
+        action="store_true",
+        default=False,
+        help="Keep the same folder structure from the input folder to the output folder.",
     )
     args = parser.parse_args()
     if args.verbose >= 2:
@@ -206,16 +233,15 @@ def main():
                     f"{args.input_path} is a directory, but no output path given."
                 )
             )
+        logging.debug(f"Going to create output directory {args.output_path}")
+        os.makedirs(args.output_path, exist_ok=True)
     elif not os.path.exists(args.input_path):
         logging.exception(
             FileNotFoundError(f"{args.input_path} doesn't actually exist")
         )
 
-    logging.debug(f"Going to create output directory {args.output_path}")
-    os.makedirs(args.output_path, exist_ok=True)
-
     logging.debug(f"input: {args.input_path}, output: {args.output_path}")
-    process(args.input_path, args.output_path)
+    process(args.input_path, args.output_path, args.tree)
 
 
 if __name__ == "__main__":
