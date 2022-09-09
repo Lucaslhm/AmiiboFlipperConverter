@@ -42,7 +42,8 @@ def convert(contents: bytes) -> Tuple[str, int]:
     When all's said and done, buffer contains text ready for writing to the end of a .nfc file.
 
     Also tracks and returns running page number, since that's also needed.
-    There should be exacly 135 pages for the .nfc not to fail on flipper
+    There should be exacly 135 pages for the .nfc not to fail on flipper,
+    due to NTAG215 beeing of 540 byte (135 pages) capacity.
     :param contents: byte array we're reading, from a .bin file
     :return: The full string of Pages, suitable for writing to a file
     """
@@ -232,13 +233,12 @@ def main():
                     f"{args.input_path} is a directory, but no output path given."
                 )
             )
+        logging.debug(f"Going to create output directory {args.output_path}")
+        os.makedirs(args.output_path, exist_ok=True)
     elif not os.path.exists(args.input_path):
         logging.exception(
             FileNotFoundError(f"{args.input_path} doesn't actually exist")
         )
-
-    logging.debug(f"Going to create output directory {args.output_path}")
-    os.makedirs(args.output_path, exist_ok=True)
 
     logging.debug(f"input: {args.input_path}, output: {args.output_path}")
     process(args.input_path, args.output_path, args.tree)
